@@ -2,6 +2,9 @@
 let startBtn, stopBtn, clearBtn, languagePair;
 let userTranscript, gptResponse, conversationHistory;
 
+// API Configuration
+let TRANSLATOR_KEY = "YOUR_TRANSLATOR_KEY_HERE"; // Will be overridden by server
+
 // State
 let ws = null;
 let audioContext = null;
@@ -91,7 +94,14 @@ const connectWebSocket = () => {
 const handleWebSocketMessage = (message) => {
   console.log("Received message type:", message.type);
   
-  if (message.type === "ready") {
+  if (message.type === "config") {
+    // Receive configuration from server
+    console.log("✓ Received configuration from server");
+    if (message.translatorKey) {
+      TRANSLATOR_KEY = message.translatorKey;
+      console.log("  Translator Key configured");
+    }
+  } else if (message.type === "ready") {
     console.log("✓ OpenAI connection ready, can start recording");
     openaiReady = true;
   } else if (message.type === "transcript") {
@@ -203,7 +213,7 @@ const translateText = (text, sourceLang, targetLang) => {
       text: [text],
       source_lang: from,
       target_lang: to,
-      subscription_key: apiKey.value || "YOUR_TRANSLATOR_KEY_HERE",
+      subscription_key: TRANSLATOR_KEY,
     }),
   })
     .then((res) => res.json())

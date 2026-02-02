@@ -102,6 +102,12 @@ wss.on("connection", (ws) => {
   console.log("✓ WebSocket client connected");
   console.log(`Total connections: ${wss.clients.size}`);
   
+  // Send configuration to client
+  ws.send(JSON.stringify({
+    type: "config",
+    translatorKey: TRANSLATOR_KEY,
+  }));
+  
   let pushStream = null;
   let recognizer = null;
   let preferredLanguage = "en";
