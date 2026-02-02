@@ -16,17 +16,40 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Azure configurations - Load from environment variables
+// Load configurations from environment variables
 console.log("🔍 Loading environment variables...");
 console.log("   SPEECH_KEY exists:", !!process.env.SPEECH_KEY);
 console.log("   SPEECH_REGION:", process.env.SPEECH_REGION);
+console.log("   AZURE_TRANSLATOR_KEY exists:", !!process.env.AZURE_TRANSLATOR_KEY || !!process.env.TRANSLATOR_KEY);
+console.log("   AZURE_TRANSLATOR_ENDPOINT:", process.env.AZURE_TRANSLATOR_ENDPOINT);
+console.log("   AZURE_TRANSLATOR_API_VERSION:", process.env.AZURE_TRANSLATOR_API_VERSION);
+console.log("   AZURE_FOUNDRY_PROJECT_ENDPOINT:", process.env.AZURE_FOUNDRY_PROJECT_ENDPOINT || process.env.AZURE_EXISTING_AIPROJECT_ENDPOINT);
+console.log("   AZURE_LOCATION:", process.env.AZURE_LOCATION);
 
-const AZURE_TRANSLATOR_ENDPOINT = process.env.AZURE_TRANSLATOR_ENDPOINT || "https://Realtime-Translation-v1-resource.cognitiveservices.azure.com/";
-const TRANSLATOR_API_VERSION = "2025-10-01-preview";
-const TRANSLATOR_KEY = process.env.TRANSLATOR_KEY || "YOUR_TRANSLATOR_KEY_HERE";
-
+// Azure Speech Services configuration
 const SPEECH_KEY = process.env.SPEECH_KEY || "YOUR_SPEECH_KEY_HERE";
 const SPEECH_REGION = process.env.SPEECH_REGION || 'japaneast';
+
+// Azure Translator (Foundry) configuration
+const AZURE_TRANSLATOR_ENDPOINT = process.env.AZURE_TRANSLATOR_ENDPOINT || "https://api.cognitive.microsofttranslator.com";
+const AZURE_TRANSLATOR_KEY = process.env.AZURE_TRANSLATOR_KEY || process.env.TRANSLATOR_KEY || "YOUR_TRANSLATOR_KEY_HERE";
+const AZURE_TRANSLATOR_REGION = process.env.AZURE_LOCATION || process.env.AZURE_TRANSLATOR_REGION || "";
+const AZURE_TRANSLATOR_API_VERSION = process.env.AZURE_TRANSLATOR_API_VERSION || "3.0";
+const AZURE_FOUNDRY_PROJECT_ENDPOINT = process.env.AZURE_FOUNDRY_PROJECT_ENDPOINT || process.env.AZURE_EXISTING_AIPROJECT_ENDPOINT || "";
+const AZURE_FOUNDRY_PROJECT_KEY = process.env.AZURE_FOUNDRY_PROJECT_KEY || process.env.AZURE_PROJECT_API_KEY || "";
+const USE_FOUNDRY_PROJECT_ENDPOINT = process.env.AZURE_TRANSLATOR_USE_PROJECT_ENDPOINT === "true";
+const USE_FOUNDRY_PREVIEW =
+  process.env.AZURE_TRANSLATOR_USE_PREVIEW === "true" ||
+  AZURE_TRANSLATOR_API_VERSION.startsWith("2025-");
+
+const ACTIVE_TRANSLATOR_ENDPOINT =
+  USE_FOUNDRY_PROJECT_ENDPOINT && AZURE_FOUNDRY_PROJECT_ENDPOINT
+    ? AZURE_FOUNDRY_PROJECT_ENDPOINT
+    : AZURE_TRANSLATOR_ENDPOINT;
+const ACTIVE_TRANSLATOR_KEY =
+  USE_FOUNDRY_PROJECT_ENDPOINT && AZURE_FOUNDRY_PROJECT_KEY
+    ? AZURE_FOUNDRY_PROJECT_KEY
+    : AZURE_TRANSLATOR_KEY;
 
 // Startup configuration check
 if (SPEECH_KEY === "YOUR_SPEECH_KEY_HERE") {
@@ -35,8 +58,18 @@ if (SPEECH_KEY === "YOUR_SPEECH_KEY_HERE") {
 if (SPEECH_REGION === "japaneast") {
   console.log("ℹ️  Using default SPEECH_REGION: japaneast");
 }
+if (!AZURE_FOUNDRY_PROJECT_KEY && AZURE_TRANSLATOR_KEY === "YOUR_TRANSLATOR_KEY_HERE") {
+  console.warn("⚠️  WARNING: Translator key is not configured. Set AZURE_TRANSLATOR_KEY or AZURE_FOUNDRY_PROJECT_KEY.");
+}
+if (!AZURE_TRANSLATOR_REGION) {
+  console.log("ℹ️  AZURE_LOCATION is not set. Ocp-Apim-Subscription-Region header will be omitted.");
+}
+if (AZURE_FOUNDRY_PROJECT_ENDPOINT && !USE_FOUNDRY_PROJECT_ENDPOINT) {
+  console.log("ℹ️  Foundry project endpoint is set but not used. Using AZURE_TRANSLATOR_ENDPOINT instead.");
+}
+console.log("ℹ️  Translator endpoint in use:", ACTIVE_TRANSLATOR_ENDPOINT);
 
-// Azure Translator proxy endpoint
+// Azure Translator proxy endpoint (Foundry)
 app.post("/api/translate", async (req, res) => {
   try {
     const { text, source_lang, target_lang } = req.body;
@@ -48,31 +81,70 @@ app.post("/api/translate", async (req, res) => {
       });
     }
 
-    // Build Azure Translator request
-    const requestBody = {
-      inputs: [
-        {
-          Text: text[0],
-          language: source_lang?.toLowerCase() || "en",
-          targets: [{ language: target_lang?.toLowerCase() || "ja" }],
-        },
-      ],
-    };
+    const sourceLanguage = (source_lang || "en").toLowerCase();
+    const targetLanguage = (target_lang || "ja").toLowerCase();
+    const normalizedEndpoint = ACTIVE_TRANSLATOR_ENDPOINT.replace(/\/$/, "");
 
     const headers = {
-      "Ocp-Apim-Subscription-Key": TRANSLATOR_KEY,
+      "Ocp-Apim-Subscription-Key": ACTIVE_TRANSLATOR_KEY,
       "Content-Type": "application/json",
     };
+    if (AZURE_TRANSLATOR_REGION) {
+      headers["Ocp-Apim-Subscription-Region"] = AZURE_TRANSLATOR_REGION;
+    }
 
-    const url = `${AZURE_TRANSLATOR_ENDPOINT}translator/text/translate?api-version=${TRANSLATOR_API_VERSION}`;
+    let url = "";
+    let requestBody;
 
-    // Forward request to Azure Translator API
+    // Check if using custom endpoint (cognitiveservices.azure.com)
+    const isCustomEndpoint = normalizedEndpoint.includes("cognitiveservices.azure.com");
+
+    if (USE_FOUNDRY_PREVIEW) {
+      url = `${normalizedEndpoint}/translator/text/translate?api-version=${AZURE_TRANSLATOR_API_VERSION}`;
+      requestBody = {
+        inputs: [
+          {
+            Text: text[0],
+            language: sourceLanguage,
+            targets: [{ language: targetLanguage }],
+          },
+        ],
+      };
+    } else {
+      // For custom endpoints, use /translator/text/v3.0/translate
+      // For global endpoint, use /translate
+      if (isCustomEndpoint) {
+        url = `${normalizedEndpoint}/translator/text/v3.0/translate?from=${sourceLanguage}&to=${targetLanguage}`;
+      } else {
+        url = `${normalizedEndpoint}/translate?api-version=${AZURE_TRANSLATOR_API_VERSION}&from=${sourceLanguage}&to=${targetLanguage}`;
+      }
+      requestBody = [{ Text: text[0] }];
+    }
+
+    console.log("🔄 Azure Translator request:", {
+      url,
+      apiVersion: AZURE_TRANSLATOR_API_VERSION,
+      preview: USE_FOUNDRY_PREVIEW,
+      endpoint: ACTIVE_TRANSLATOR_ENDPOINT,
+      hasKey: ACTIVE_TRANSLATOR_KEY && ACTIVE_TRANSLATOR_KEY !== "YOUR_TRANSLATOR_KEY_HERE",
+      keyPrefix: ACTIVE_TRANSLATOR_KEY ? ACTIVE_TRANSLATOR_KEY.substring(0, 8) + "..." : "none",
+      hasRegion: !!AZURE_TRANSLATOR_REGION,
+      region: AZURE_TRANSLATOR_REGION,
+      headers: Object.keys(headers),
+      text: text[0],
+    });
+
+    console.log("📤 Request body:", JSON.stringify(requestBody, null, 2));
+
     const response = await axios.post(url, requestBody, { headers });
-    
-    // Extract translated text from Azure response
-    const translatedText = response.data?.value?.[0]?.translations?.[0]?.text || "";
-    
-    // Return in compatible format
+
+    const translatedText =
+      response.data?.[0]?.translations?.[0]?.text ||
+      response.data?.value?.[0]?.translations?.[0]?.text ||
+      "";
+
+    console.log("✓ Translation successful:", translatedText);
+
     res.json({
       translations: [
         {
@@ -97,7 +169,8 @@ wss.on("connection", (ws) => {
   // Send configuration to client
   ws.send(JSON.stringify({
     type: "config",
-    translatorKey: TRANSLATOR_KEY,
+    translatorConfigured: AZURE_TRANSLATOR_KEY !== "YOUR_TRANSLATOR_KEY_HERE",
+    translationService: "Azure Translator",
   }));
   
   let pushStream = null;

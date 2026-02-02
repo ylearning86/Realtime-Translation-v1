@@ -97,9 +97,10 @@ const handleWebSocketMessage = (message) => {
   if (message.type === "config") {
     // Receive configuration from server
     console.log("✓ Received configuration from server");
-    if (message.translatorKey) {
-      TRANSLATOR_KEY = message.translatorKey;
-      console.log("  Translator Key configured");
+    if (message.translatorConfigured) {
+      console.log("  Translator configured:", message.translationService || "Azure Translator");
+    } else {
+      console.warn("  Translator not configured");
     }
   } else if (message.type === "ready") {
     console.log("✓ OpenAI connection ready, can start recording");
