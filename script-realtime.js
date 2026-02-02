@@ -50,10 +50,16 @@ function initializeApp() {
 // WebSocket connection with improved error handling
 const connectWebSocket = () => {
   return new Promise((resolve, reject) => {
-    const port = window.location.hostname === 'localhost' ? 3001 : '';
-    const wsUrl = window.location.hostname === 'localhost' 
-      ? `ws://localhost:${port}/api/realtime`
-      : `${window.location.protocol.replace('http', 'ws')}//${window.location.host}/api/realtime`;
+    // Determine WebSocket URL
+    let wsUrl;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      // Local development
+      wsUrl = 'ws://localhost:3001/api/realtime';
+    } else {
+      // Production - determine protocol based on current page protocol
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${window.location.host}/api/realtime`;
+    }
     console.log("Attempting to connect to", wsUrl);
     
     ws = new WebSocket(wsUrl);
@@ -180,9 +186,16 @@ const translateText = (text, sourceLang, targetLang) => {
 
   console.log(`Translating from ${from} to ${to}:`, text);
 
-  const apiUrl = window.location.hostname === 'localhost'
-    ? 'http://localhost:3001/api/translate'
-    : `${window.location.protocol}//${window.location.host}/api/translate`;
+  // Determine API URL based on environment
+  let apiUrl;
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Local development
+    apiUrl = 'http://localhost:3001/api/translate';
+  } else {
+    // Production - use same host
+    apiUrl = `${window.location.protocol}//${window.location.host}/api/translate`;
+  }
+  
   fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
