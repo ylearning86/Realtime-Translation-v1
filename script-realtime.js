@@ -50,9 +50,13 @@ function initializeApp() {
 // WebSocket connection with improved error handling
 const connectWebSocket = () => {
   return new Promise((resolve, reject) => {
-    console.log("Attempting to connect to ws://localhost:3002/api/realtime");
+    const port = window.location.hostname === 'localhost' ? 3001 : '';
+    const wsUrl = window.location.hostname === 'localhost' 
+      ? `ws://localhost:${port}/api/realtime`
+      : `${window.location.protocol.replace('http', 'ws')}//${window.location.host}/api/realtime`;
+    console.log("Attempting to connect to", wsUrl);
     
-    ws = new WebSocket("ws://localhost:3002/api/realtime");
+    ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log("✓ Connected to Realtime server");
@@ -176,7 +180,10 @@ const translateText = (text, sourceLang, targetLang) => {
 
   console.log(`Translating from ${from} to ${to}:`, text);
 
-  fetch("http://localhost:3002/api/translate", {
+  const apiUrl = window.location.hostname === 'localhost'
+    ? 'http://localhost:3001/api/translate'
+    : `${window.location.protocol}//${window.location.host}/api/translate`;
+  fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

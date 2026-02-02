@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
@@ -8,13 +10,17 @@ const sdk = require('microsoft-cognitiveservices-speech-sdk');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: "/api/realtime" });
-const PORT = 3002;
+const PORT = process.env.PORT || 3001;
 
 // Enable CORS for all origins
 app.use(cors());
 app.use(express.json());
 
 // Azure configurations - Load from environment variables
+console.log("🔍 Loading environment variables...");
+console.log("   SPEECH_KEY exists:", !!process.env.SPEECH_KEY);
+console.log("   SPEECH_REGION:", process.env.SPEECH_REGION);
+
 const AZURE_TRANSLATOR_ENDPOINT = process.env.AZURE_TRANSLATOR_ENDPOINT || "https://Realtime-Translation-v1-resource.cognitiveservices.azure.com/";
 const TRANSLATOR_API_VERSION = "2025-10-01-preview";
 const TRANSLATOR_KEY = process.env.TRANSLATOR_KEY || "YOUR_TRANSLATOR_KEY_HERE";
