@@ -28,7 +28,32 @@ npm start
 
 ## 本番環境デプロイ
 
-👉 [デプロイガイド](../DEPLOYMENT_GUIDE.md) を参照
+### Azure Functions + Static Web Apps でデプロイ
+
+#### ステップ 1: 環境変数を設定
+
+```bash
+./setup-env.sh
+```
+
+または Azure Portal から手動設定：
+
+- `SPEECH_KEY`: Azure Speech Services のキー
+- `AZURE_TRANSLATOR_KEY`: Azure Translator のキー  
+- `AZURE_LOCATION`: swedencentral
+
+#### ステップ 2: バックエンドをデプロイ
+
+```bash
+cd backend
+func azure functionapp publish realtime-translation-api --build remote
+```
+
+#### ステップ 3: フロントエンドを Static Web Apps にデプロイ
+
+Azure Portal または GitHub Actions で自動デプロイ
+
+📖 詳細は [デプロイガイド](./DEPLOYMENT_GUIDE_SWA.md) を参照
 
 ## Usage
 
