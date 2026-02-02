@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-time Translation with Speech Recognition</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎤 Real-time Translation</h1>
+      <p class="subtitle">Speak naturally, translate instantly</p>
+    </header>
+
+    <div class="status-bar">
+      <div class="status-indicator" id="statusIndicator">
+        <span class="status-dot"></span>
+        <span class="status-text">Ready</span>
+      </div>
+      <div class="connection-status" id="connectionStatus">
+        <span class="connection-dot"></span>
+        <span>Connected</span>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <!-- Language Selection -->
+      <div class="card language-card">
+        <h2>🌐 Select Language</h2>
+        <div class="language-selector">
+          <button class="lang-btn active" data-lang="ja" id="languagePair">
+            <span>JP → EN</span>
+          </button>
+          <button class="lang-btn" data-lang="en">
+            <span>EN → JP</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="card controls-card">
+        <div class="controls">
+          <button id="startBtn" class="btn btn-primary">
+            <span class="btn-icon">🎙️</span>
+            <span>Start Recording</span>
+          </button>
+          <button id="stopBtn" class="btn btn-secondary" disabled>
+            <span class="btn-icon">⏹️</span>
+            <span>Stop</span>
+          </button>
+          <button id="clearBtn" class="btn btn-outline">
+            <span class="btn-icon">🗑️</span>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Speech Recognition & Translation Results -->
+      <div class="results-container">
+        <div class="card result-card">
+          <div class="card-header">
+            <h2>🎯 Recognized Speech</h2>
+            <span class="live-badge" id="liveBadge">LIVE</span>
+          </div>
+          <div class="result-content">
+            <div id="userTranscript" class="transcript">
+              <span class="placeholder">Your speech will appear here...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card result-card">
+          <div class="card-header">
+            <h2>🌍 Translation</h2>
+          </div>
+          <div class="result-content">
+            <div id="gptResponse" class="translation">
+              <span class="placeholder">Translation will appear here...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script-realtime.js"></script>
+</body>
+</html>
