@@ -213,7 +213,6 @@ const translateText = (text, sourceLang, targetLang) => {
       text: [text],
       source_lang: from,
       target_lang: to,
-      subscription_key: TRANSLATOR_KEY,
     }),
   })
     .then((res) => res.json())

@@ -39,14 +39,7 @@ if (SPEECH_REGION === "japaneast") {
 // Azure Translator proxy endpoint
 app.post("/api/translate", async (req, res) => {
   try {
-    const { text, source_lang, target_lang, subscription_key } = req.body;
-
-    if (!subscription_key) {
-      return res.status(400).json({
-        error: "Missing API key",
-        details: "subscription_key is required",
-      });
-    }
+    const { text, source_lang, target_lang } = req.body;
 
     if (!text || !Array.isArray(text) || text.length === 0 || !text[0]?.trim()) {
       return res.status(400).json({
@@ -67,8 +60,7 @@ app.post("/api/translate", async (req, res) => {
     };
 
     const headers = {
-      "Ocp-Apim-Subscription-Key": subscription_key,
-      "Authorization": subscription_key,
+      "Ocp-Apim-Subscription-Key": TRANSLATOR_KEY,
       "Content-Type": "application/json",
     };
 
